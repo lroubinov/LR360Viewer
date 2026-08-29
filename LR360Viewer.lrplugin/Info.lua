@@ -3,7 +3,7 @@ return {
     LrSdkMinimumVersion = 6.0,
     LrToolkitIdentifier = "com.lr360viewer.plugin",
     LrPluginName = "LR 360 Viewer",
-    VERSION = { major=1, minor=0, revision=1, build=1 },
+    VERSION = { major=1, minor=1, revision=0, build=1 },
     LrInitPlugin = "Init.lua",
     LrForceInitPlugin = true,
 

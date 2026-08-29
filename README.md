@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lroubinov/LR360Viewer/releases/download/v1.0.1/LR360Viewer-v1.0.1-Windows.zip"><strong>⬇ Download Lightroom 360 Viewer v1.0.1 for Windows</strong></a>
+  <a href="https://github.com/lroubinov/LR360Viewer/releases/download/v1.1.0/LR360Viewer-v1.1.0-Windows.zip"><strong>⬇ Download Lightroom 360 Viewer v1.1.0 for Windows</strong></a>
   &nbsp;•&nbsp;
   <a href="https://github.com/lroubinov/LR360Viewer/releases/latest">Latest Release</a>
 </p>
@@ -48,7 +48,7 @@ The viewer can be launched from **Plug-in Extras** or configured as a Lightroom 
 
 ## Installation
 
-1. **Download:** [LR360Viewer-v1.0.1-Windows.zip](https://github.com/lroubinov/LR360Viewer/releases/download/v1.0.1/LR360Viewer-v1.0.1-Windows.zip)
+1. **Download:** [LR360Viewer-v1.1.0-Windows.zip](https://github.com/lroubinov/LR360Viewer/releases/download/v1.1.0/LR360Viewer-v1.1.0-Windows.zip)
 2. Extract the ZIP to a permanent location, for example `C:\LR360Viewer\`.
 3. After extraction you should have a folder named `LR360Viewer.lrplugin`.
 4. Open Lightroom Classic.
@@ -133,4 +133,4 @@ MIT.
 
 ## Version
 
-**Latest packaged release: v1.0.1.** The current `main` branch also includes active-photo Live Link, on-demand Lightroom Develop rendering and hybrid External Editor support.
+**v1.1.0** — adds active-photo Live Link, on-demand Lightroom Develop rendering and hybrid External Editor support.
