@@ -1,4 +1,4 @@
-# LR 360 Viewer
+# Adobe Lightroom 360 Viewer
 
 <p align="center">
   <img src="assets/LR360Viewer.png" width="180" alt="LR 360 Viewer icon">
