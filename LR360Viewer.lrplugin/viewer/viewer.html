@@ -522,7 +522,7 @@ function drawAt(w,h,doResize){
   gl.viewport(0,0,rw,rh);
   gl.activeTexture(gl.TEXTURE0);
   gl.bindTexture(gl.TEXTURE_2D,tex);
-  gl.uniform1i(gl.getUniformLocation(pr,'img'),0);
+  gl.uniform1i(gl.getUniformLocation(pr,'tex'),0);
   gl.uniform2f(gl.getUniformLocation(pr,'res'),rw,rh);
   gl.uniform1f(gl.getUniformLocation(pr,'yaw'),yaw);
   gl.uniform1f(gl.getUniformLocation(pr,'pitch'),pitch);
@@ -588,6 +588,10 @@ function lookHere(clientX,clientY){
 
   // Match shader Roll before projection.
   [qx,qy]=rotate2(qx,qy,roll);
+  // Match the shader's global scale transform before calculating the
+  // projection ray. Scale > 1 zooms in; Scale < 1 zooms out.
+  qx/=Math.max(scale,0.05);
+  qy/=Math.max(scale,0.05);
 
   if(mode===2){
     // Tiny Planet is a nadir-centered projection rather than a normal optical
@@ -613,13 +617,17 @@ function lookHere(clientX,clientY){
     const theta=2*Math.atan(rr*Math.tan((fov*Math.PI/180)*0.25)*1.88);
     const a=Math.atan2(qy,qx);
     d=[Math.sin(theta)*Math.cos(a),Math.sin(theta)*Math.sin(a),-Math.cos(theta)];
-  }else{
+  }else if(mode===3){
     const rr=Math.hypot(qx,qy);
     if(rr<1e-9) return;
     let theta=rr*(fov*Math.PI/180)*0.92;
     theta=Math.min(theta,Math.PI-0.001);
     const a=Math.atan2(qy,qx);
     d=[Math.sin(theta)*Math.cos(a),Math.sin(theta)*Math.sin(a),-Math.cos(theta)];
+  }else{
+    // Match the Dewarp shader exactly.
+    const z=1/Math.tan((fov*Math.PI/180)*0.43);
+    d=norm3([qx*1.55,qy*1.55,-z]);
   }
 
   // Shader camera rotation is Rx(pitch) then Ry(yaw).
@@ -858,7 +866,7 @@ async function renderAndSave(state,shotIndex){
 
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D,tex);
-    gl.uniform1i(gl.getUniformLocation(pr,'img'),0);
+    gl.uniform1i(gl.getUniformLocation(pr,'tex'),0);
     gl.viewport(0,0,saveW,saveH);
     gl.uniform2f(gl.getUniformLocation(pr,'res'),saveW,saveH);
     gl.uniform1f(gl.getUniformLocation(pr,'yaw'),saveYaw);
@@ -909,7 +917,7 @@ async function renderAndSave(state,shotIndex){
     if(fb)gl.deleteFramebuffer(fb);
     gl.bindFramebuffer(gl.FRAMEBUFFER,null);
     gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,tex);
-    gl.uniform1i(gl.getUniformLocation(pr,'img'),0);
+    gl.uniform1i(gl.getUniformLocation(pr,'tex'),0);
     gl.viewport(0,0,c.width,c.height);
     gl.uniform2f(gl.getUniformLocation(pr,'res'),c.width,c.height);
     gl.uniform1f(gl.getUniformLocation(pr,'yaw'),yaw);

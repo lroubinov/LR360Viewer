@@ -2,8 +2,8 @@ name: Build Windows Release
 
 on:
   push:
-    branches: [ main ]
-  workflow_dispatch:
+    tags:
+      - 'v*'
 
 permissions:
   contents: write
@@ -11,6 +11,9 @@ permissions:
 jobs:
   build:
     runs-on: windows-latest
+    env:
+      RELEASE_TAG: ${{ github.ref_name }}
+      ZIP_NAME: LR360Viewer-${{ github.ref_name }}-Windows.zip
 
     steps:
       - name: Checkout
@@ -39,24 +42,23 @@ jobs:
 
       - name: Create Windows release ZIP
         shell: pwsh
-        run: Compress-Archive -Path "LR360Viewer.lrplugin" -DestinationPath "LR360Viewer-v1.0.0-Windows.zip" -Force
+        run: Compress-Archive -Path "LR360Viewer.lrplugin" -DestinationPath $env:ZIP_NAME -Force
 
       - name: Upload Actions artifact
         uses: actions/upload-artifact@v4
         with:
-          name: LR360Viewer-v1.0.0-Windows
-          path: LR360Viewer-v1.0.0-Windows.zip
+          name: LR360Viewer-${{ github.ref_name }}-Windows
+          path: ${{ env.ZIP_NAME }}
 
-      - name: Create or update GitHub Release
+      - name: Create GitHub Release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release view v1.0.0 *> $null
-          if ($LASTEXITCODE -ne 0) {
-            gh release create v1.0.0 "LR360Viewer-v1.0.0-Windows.zip" `
-              --title "LR 360 Viewer v1.0.0" `
-              --notes "First stable public release. Windows Lightroom Classic 360 reframe plug-in with standalone WebView2 viewer."
-          } else {
-            gh release upload v1.0.0 "LR360Viewer-v1.0.0-Windows.zip" --clobber
+          gh release view $env:RELEASE_TAG *> $null
+          if ($LASTEXITCODE -eq 0) {
+            throw "Release $env:RELEASE_TAG already exists. Create a new version tag instead of overwriting it."
           }
+          gh release create $env:RELEASE_TAG $env:ZIP_NAME `
+            --title "LR 360 Viewer $env:RELEASE_TAG" `
+            --generate-notes

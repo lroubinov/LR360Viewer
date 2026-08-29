@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lroubinov/LR360Viewer/releases/download/v1.0.0/LR360Viewer-v1.0.0-Windows.zip"><strong>⬇ Download LR 360 Viewer v1.0.0 for Windows</strong></a>
+  <a href="https://github.com/lroubinov/LR360Viewer/releases/download/v1.0.1/LR360Viewer-v1.0.1-Windows.zip"><strong>⬇ Download LR 360 Viewer v1.0.1 for Windows</strong></a>
   &nbsp;•&nbsp;
   <a href="https://github.com/lroubinov/LR360Viewer/releases/latest">Latest Release</a>
 </p>
@@ -41,7 +41,7 @@ LR 360 Viewer adds an interactive 360° reframe workflow to Adobe Lightroom Clas
 
 ## Installation
 
-1. **Download:** [LR360Viewer-v1.0.0-Windows.zip](https://github.com/lroubinov/LR360Viewer/releases/download/v1.0.0/LR360Viewer-v1.0.0-Windows.zip)
+1. **Download:** [LR360Viewer-v1.0.1-Windows.zip](https://github.com/lroubinov/LR360Viewer/releases/download/v1.0.1/LR360Viewer-v1.0.1-Windows.zip)
 2. Extract the ZIP to a permanent location, for example `C:\LR360Viewer\`.
 3. After extraction you should have a folder named `LR360Viewer.lrplugin`.
 4. Open Lightroom Classic.
@@ -105,4 +105,4 @@ MIT.
 
 ## Version
 
-**v1.0.0** — first stable public release.
+**v1.0.1** — fixes Double-click Look Here with Scale and Dewarp, and corrects the WebGL texture sampler binding.

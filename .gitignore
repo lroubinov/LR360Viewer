@@ -1,0 +1,12 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+build/
+dist/
+LR360Viewer.lrplugin/viewer/LR360Viewer.exe
+*.spec.bak
+*.log
+.DS_Store
+Thumbs.db
+AGENTS.md

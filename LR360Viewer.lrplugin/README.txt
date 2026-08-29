@@ -1,4 +1,4 @@
-LR 360 Viewer v2.7.1
-- Reframe now auto-hides with the rest of the UI after mouse inactivity.
-- Added Collapse/Expand button to Reframe.
-- All V2.7 functionality unchanged.
+LR 360 Viewer v1.0.1
+- Double-click Look Here now matches Scale and the Dewarp projection.
+- Corrected the WebGL panorama texture sampler binding.
+- All approved projection rendering remains unchanged.
