@@ -32,18 +32,35 @@ def _apply_windows_identity():
         ICON_SMALL = 0
         ICON_BIG = 1
 
-        user32.LoadImageW.argtypes = [wintypes.HINSTANCE, wintypes.LPCWSTR, wintypes.UINT, ctypes.c_int, ctypes.c_int, wintypes.UINT]
+        user32.LoadImageW.argtypes = [
+            wintypes.HINSTANCE,
+            wintypes.LPCWSTR,
+            wintypes.UINT,
+            ctypes.c_int,
+            ctypes.c_int,
+            wintypes.UINT,
+        ]
         user32.LoadImageW.restype = wintypes.HANDLE
         user32.FindWindowW.argtypes = [wintypes.LPCWSTR, wintypes.LPCWSTR]
         user32.FindWindowW.restype = wintypes.HWND
-        user32.SendMessageW.argtypes = [wintypes.HWND, wintypes.UINT, wintypes.WPARAM, wintypes.LPARAM]
-        user32.SendMessageW.restype = wintypes.LRESULT
+        user32.SendMessageW.argtypes = [
+            wintypes.HWND,
+            wintypes.UINT,
+            wintypes.WPARAM,
+            wintypes.LPARAM,
+        ]
+        # ctypes.wintypes has no LRESULT alias in standard Python.
+        user32.SendMessageW.restype = ctypes.c_ssize_t
 
-        big_icon = user32.LoadImageW(None, icon_path, IMAGE_ICON, 32, 32, LR_LOADFROMFILE)
-        small_icon = user32.LoadImageW(None, icon_path, IMAGE_ICON, 16, 16, LR_LOADFROMFILE)
+        big_icon = user32.LoadImageW(
+            None, icon_path, IMAGE_ICON, 32, 32, LR_LOADFROMFILE
+        )
+        small_icon = user32.LoadImageW(
+            None, icon_path, IMAGE_ICON, 16, 16, LR_LOADFROMFILE
+        )
 
         # pywebview creates the HWND after Python startup, so wait for it.
-        for _ in range(200):
+        for _ in range(400):
             hwnd = user32.FindWindowW(None, "LR 360 Viewer")
             if hwnd:
                 if big_icon:
