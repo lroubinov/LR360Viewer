@@ -19,7 +19,12 @@ LrTasks.startAsyncTask(function()
         return
     end
 
-    local tempRoot = LrPathUtils.child(_PLUGIN.path, "temp")
+    -- Never write temporary render files inside the plug-in installation folder.
+    -- The plug-in may be installed under Program Files or another read-only path.
+    -- Lightroom's SDK temp directory is user-writable and appropriate for renders,
+    -- sidecars and the temporary launcher used by LR 360 Viewer.
+    local tempRoot = LrPathUtils.getStandardFilePath("temp")
+    tempRoot = LrPathUtils.child(tempRoot, "LR360Viewer")
     LrFileUtils.createAllDirectories(tempRoot)
 
     local settings = {
