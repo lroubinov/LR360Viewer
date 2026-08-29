@@ -4,6 +4,8 @@ return {
     LrToolkitIdentifier = "com.lr360viewer.plugin",
     LrPluginName = "LR 360 Viewer",
     VERSION = { major=1, minor=0, revision=1, build=1 },
+    LrInitPlugin = "Init.lua",
+    LrForceInitPlugin = true,
 
     LrLibraryMenuItems = {
         { title = "View 360°", file = "View360.lua" },

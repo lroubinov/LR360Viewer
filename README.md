@@ -1,7 +1,7 @@
-# Adobe Lightroom 360 Viewer
+# Lightroom 360 Viewer
 
 <p align="center">
-  <img src="assets/LR360Viewer.png" width="180" alt="LR 360 Viewer icon">
+  <img src="assets/LR360Viewer.png" width="180" alt="Lightroom 360 Viewer icon">
 </p>
 
 <p align="center">
@@ -9,7 +9,7 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/lroubinov/LR360Viewer/releases/download/v1.0.1/LR360Viewer-v1.0.1-Windows.zip"><strong>⬇ Download LR 360 Viewer v1.0.1 for Windows</strong></a>
+  <a href="https://github.com/lroubinov/LR360Viewer/releases/download/v1.0.1/LR360Viewer-v1.0.1-Windows.zip"><strong>⬇ Download Lightroom 360 Viewer v1.0.1 for Windows</strong></a>
   &nbsp;•&nbsp;
   <a href="https://github.com/lroubinov/LR360Viewer/releases/latest">Latest Release</a>
 </p>
@@ -18,10 +18,17 @@
 
 ## What it does
 
-LR 360 Viewer adds an interactive 360° reframe workflow to Adobe Lightroom Classic. Lightroom renders the selected stitched equirectangular panorama with your current Develop adjustments, then LR 360 Viewer lets you choose the view, projection, framing and output without leaving the Lightroom workflow.
+Lightroom 360 Viewer adds an interactive 360° reframe workflow to Adobe Lightroom Classic. Keep the viewer open while you move through the Filmstrip or Grid: Live Link follows Lightroom's active photo and loads its source file directly for fast browsing. A Lightroom render with the current Develop adjustments is created only when you click **Apply Lightroom Edits**.
+
+The viewer can be launched from **Plug-in Extras** or configured as a Lightroom **External Editor**. When the plug-in is installed and Lightroom is running, External Editor mode automatically connects to the same Live Link workflow.
 
 ## Features
 
+- Live Link to the active Lightroom photo in Filmstrip and Grid
+- Fast source-file switching without a Lightroom render on every photo
+- On-demand **Apply Lightroom Edits** render with current Develop adjustments
+- Works both as a Lightroom plug-in and as an External Editor
+- Automatic fallback for source formats that WebView2 cannot display directly
 - Native-looking Windows viewer using Microsoft Edge WebView2
 - Linear, UltraWide, Tiny Planet, Mega View and Dewarp projections
 - Studio-style Reframe panel
@@ -57,6 +64,7 @@ The release package contains the pre-built `LR360Viewer.exe`; users do not need 
 ```text
 LR360Viewer.lrplugin/
 ├── Info.lua
+├── Init.lua
 ├── View360.lua
 └── viewer/
     ├── LR360Viewer.exe
@@ -65,20 +73,40 @@ LR360Viewer.lrplugin/
     └── ...
 ```
 
+### Plug-in mode
+
+Select the active panorama and choose **Library → Plug-in Extras → View 360°**. The viewer opens immediately from the source file. Changing the active photo in Lightroom updates the open viewer automatically after a short debounce.
+
+Click **Apply Lightroom Edits** whenever you want Lightroom to render the active photo with its current Develop settings. The viewer then replaces the direct source preview with that rendered version.
+
+### External Editor mode with Live Link
+
+1. Keep the `LR360Viewer.lrplugin` plug-in installed and enabled.
+2. In Lightroom Classic, open **Edit → Preferences → External Editing**.
+3. Under **Additional External Editor**, choose `LR360Viewer.exe` from `LR360Viewer.lrplugin\viewer\`.
+4. Configure the external edit format as JPEG or TIFF.
+5. Send a photo to the configured editor from Lightroom.
+
+The viewer first opens in External Editor mode and then connects automatically. The status changes to **External Editor - Live Link**. You can now move through Filmstrip/Grid and use **Apply Lightroom Edits** exactly as in plug-in mode.
+
+If Lightroom or the plug-in bridge is unavailable, the viewer remains usable as a normal External Editor and saves back to the JPEG/TIFF copy supplied by Lightroom.
+
 ## Requirements
 
 - Windows 10 or Windows 11
 - Adobe Lightroom Classic
 - Microsoft Edge WebView2 Runtime
-- A stitched 2:1 equirectangular JPEG
+- A stitched 2:1 equirectangular image; unsupported direct-preview formats can use **Apply Lightroom Edits**
 
 ## Saving a reframed image
 
-**Save Perspective** renders the current projection, camera orientation, FOV, roll, aspect ratio and Lightroom Develop appearance at the selected output resolution. The saved image is written next to the original source and automatically imported back into Lightroom, stacked with the source photo.
+**Save Perspective** renders the current projection, camera orientation, FOV, roll, scale and aspect ratio at the selected output resolution. In Plug-in mode and External Editor Live Link mode, the saved image is written next to the original source, imported into Lightroom and stacked with that source photo.
+
+The direct source preview does not include Lightroom Develop adjustments. Click **Apply Lightroom Edits** before saving when the result should use Lightroom's current Develop appearance.
 
 ## Insta360 `.INSP` files
 
-LR 360 Viewer does not directly decode proprietary `.INSP` files. Stitch the image first in Insta360 Studio or another compatible stitcher and use the resulting equirectangular JPEG in Lightroom.
+Lightroom 360 Viewer does not directly decode proprietary `.INSP` files. Stitch the image first in Insta360 Studio or another compatible stitcher and use the resulting equirectangular JPEG in Lightroom.
 
 ## Windows SmartScreen
 
@@ -105,4 +133,4 @@ MIT.
 
 ## Version
 
-**v1.0.1** — fixes Double-click Look Here with Scale and Dewarp, and corrects the WebGL texture sampler binding.
+**Latest packaged release: v1.0.1.** The current `main` branch also includes active-photo Live Link, on-demand Lightroom Develop rendering and hybrid External Editor support.
