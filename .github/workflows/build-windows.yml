@@ -1,0 +1,61 @@
+name: Build Windows Release
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+
+      - name: Install build dependencies
+        run: pip install -r requirements-build.txt
+
+      - name: Build EXE
+        run: pyinstaller --clean --noconfirm LR360Viewer.spec
+
+      - name: Put EXE inside Lightroom plug-in
+        shell: pwsh
+        run: Copy-Item "dist\\LR360Viewer.exe" "LR360Viewer.lrplugin\\viewer\\LR360Viewer.exe"
+
+      - name: Remove developer-only setup helper
+        shell: pwsh
+        run: Remove-Item "LR360Viewer.lrplugin\\viewer\\Install-WebView2.cmd" -ErrorAction SilentlyContinue
+
+      - name: Create Windows release ZIP
+        shell: pwsh
+        run: Compress-Archive -Path "LR360Viewer.lrplugin" -DestinationPath "LR360Viewer-v1.0.0-Windows.zip" -Force
+
+      - name: Upload Actions artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: LR360Viewer-v1.0.0-Windows
+          path: LR360Viewer-v1.0.0-Windows.zip
+
+      - name: Create or update GitHub Release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release view v1.0.0 *> $null
+          if ($LASTEXITCODE -ne 0) {
+            gh release create v1.0.0 "LR360Viewer-v1.0.0-Windows.zip" `
+              --title "LR 360 Viewer v1.0.0" `
+              --notes "First stable public release. Windows Lightroom Classic 360 reframe plug-in with standalone WebView2 viewer."
+          } else {
+            gh release upload v1.0.0 "LR360Viewer-v1.0.0-Windows.zip" --clobber
+          }
