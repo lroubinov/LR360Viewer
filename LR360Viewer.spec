@@ -5,6 +5,7 @@ wv_datas, wv_bins, wv_hidden = collect_all('webview')
 
 datas = [
     ('LR360Viewer.lrplugin/viewer/viewer.html', '.'),
+    ('assets/LR360Viewer.ico', '.'),
 ]
 datas += wv_datas
 
@@ -24,7 +25,7 @@ a = Analysis(
     hiddenimports=hiddenimports,
     hookspath=[],
     hooksconfig={},
-    runtime_hooks=[],
+    runtime_hooks=['rthook_lr360_icon.py'],
     excludes=[],
     noarchive=False,
 )
