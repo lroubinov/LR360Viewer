@@ -1,0 +1,968 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>LR 360 Viewer</title>
+<style>
+html,body{margin:0;width:100%;height:100%;overflow:hidden;background:#111;color:#fff;font-family:Segoe UI,Arial,sans-serif}
+canvas{
+position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);
+display:block;cursor:grab;background:#000;
+box-shadow:0 0 0 1px #ffffff18
+}
+canvas:active{cursor:grabbing}
+#bar{position:fixed;z-index:10;top:12px;left:50%;transform:translateX(-50%);
+background:#000c;padding:8px 10px;border-radius:11px;display:flex;gap:7px;align-items:center;justify-content:center;flex-wrap:wrap;max-width:calc(100vw - 24px);box-shadow:0 4px 20px #0008;opacity:0;pointer-events:none;transition:opacity .22s ease}
+button,select{
+background:#333;color:#fff;border:1px solid #777;border-radius:6px;
+padding:7px 10px;cursor:pointer
+}
+#ratioWrap{
+display:flex;align-items:center;gap:5px;padding-left:5px;
+border-left:1px solid #666
+}
+#ratioWrap label{font-size:12px;color:#ddd}
+#ratioSelect{min-width:78px}
+#fovWrap,#rollWrap,#saveWrap{
+display:flex;align-items:center;gap:5px;padding-left:5px;border-left:1px solid #666
+}
+#fovWrap label,#rollWrap label,#saveWrap label{font-size:12px;color:#ddd}
+#fovRange{width:115px}
+#fovNumber,#rollNumber{width:62px}
+#saveSize{min-width:92px}
+#saveQuality{min-width:72px}
+#saveFormat{min-width:82px}
+#guideWrap,#snapWrap{display:flex;align-items:center;gap:5px;padding-left:5px;border-left:1px solid #666}
+#guideWrap label{font-size:12px;color:#ddd}
+#guideSelect{min-width:82px}
+#guides{position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none;z-index:5;display:none}
+#guides .line{position:absolute;background:#ffffffb5;box-shadow:0 0 2px #000}
+#guides .v{top:0;bottom:0;width:1px}
+#guides .h{left:0;right:0;height:1px}
+#guides .v1{left:33.333%}.v2{left:66.666%}
+#guides .h1{top:33.333%}.h2{top:66.666%}
+#guides .vc{left:50%}.hc{top:50%}
+#snapshotPanel{position:fixed;z-index:12;right:12px;top:74px;width:340px;max-height:60vh;overflow:auto;background:#111e;border:1px solid #666;border-radius:10px;padding:8px;display:none;box-shadow:0 5px 24px #000a;font-size:12px}
+#snapshotPanel.visible{display:block}
+.snapRow{display:flex;align-items:center;gap:6px;padding:6px;border-bottom:1px solid #444}
+.snapText{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.snapRow button{padding:4px 7px}
+input[type=number]{
+background:#222;color:#fff;border:1px solid #777;border-radius:6px;padding:7px 6px
+}
+input[type=range]{accent-color:#aaa}
+
+button.active{background:#666}
+#status{position:fixed;z-index:10;left:12px;bottom:12px;background:#000c;padding:8px 10px;border-radius:7px;font-size:12px;opacity:0;transition:opacity .22s ease;pointer-events:none}
+.ui-visible #bar,.ui-visible #status,.ui-visible #reframePanel{opacity:1}.ui-visible #bar,.ui-visible #reframePanel{pointer-events:auto}
+#error{position:fixed;z-index:20;inset:0;display:none;align-items:center;justify-content:center;background:#111;padding:40px;white-space:pre-wrap;font-family:Consolas,monospace}
+
+#reframePanel{position:fixed;left:14px;top:14px;z-index:20;width:286px;opacity:0;pointer-events:none;transition:opacity .22s ease;background:#181a1cef;border:1px solid #303338;border-radius:9px;padding:12px;box-shadow:0 7px 26px #0009;color:#eee;font-family:Arial,sans-serif;user-select:none}
+
+#reframePanel.collapsed{width:auto;min-width:142px;padding:9px 10px}
+#reframePanel.collapsed .rfSub,#reframePanel.collapsed #projectionButtons,#reframePanel.collapsed .rfGrid,#reframePanel.collapsed #rfReset{display:none}
+#reframePanel.collapsed .rfTitle{margin-bottom:0}
+#rfCollapse{min-width:28px;padding:3px 7px;font-size:13px}
+.rfTitle{font-weight:700;font-size:14px;margin-bottom:12px;display:flex;justify-content:space-between}.rfSub{font-size:12px;color:#9fa6ad;margin-bottom:7px}
+#projectionButtons{display:grid;grid-template-columns:repeat(5,1fr);gap:5px;margin-bottom:13px}#projectionButtons button{padding:8px 2px;font-size:9px;min-width:0;background:#25282c;border:1px solid #25282c}
+#projectionButtons button.active{border-color:#d6b900;color:#ffe600;background:#292a22}.rfGrid{display:grid;grid-template-columns:1fr 1fr;gap:8px 10px}.rfControl{background:#202225;border-radius:6px;padding:7px}
+.rfLabel{font-size:10px;color:#9da4aa;margin-bottom:3px}.rfValueRow{display:flex;align-items:center;gap:3px}.rfValue{width:76px;background:transparent;border:0!important;color:#ffe000!important;font-weight:700;font-size:15px;padding:1px!important;outline:none}.rfUnit{color:#ffe000;font-size:12px}
+.rfControl input[type=range]{width:100%;margin-top:4px}#rfReset{margin-top:10px;width:100%;font-size:11px;padding:6px}
+#fovWrap,#rollWrap{display:none!important}
+</style>
+</head>
+<body>
+
+<div id="reframePanel">
+<div class="rfTitle"><span>Reframe</span><span style="display:flex;gap:5px"><button id="rfCollapse" title="Collapse Reframe">−</button><button id="rfResetTop" title="Reset Reframe">↶</button></span></div><div class="rfSub">View Angle Gear</div>
+<div id="projectionButtons"><button data-mode="2">PLANET</button><button data-mode="3">MEGA</button><button data-mode="1">ULTRA</button><button data-mode="4">DEWARP</button><button data-mode="0">LINEAR</button></div>
+<div class="rfGrid">
+<div class="rfControl"><div class="rfLabel">View Angle</div><div class="rfValueRow"><input id="rfFov" class="rfValue" type="number" step=".1"><span class="rfUnit">°</span></div><input id="rfFovRange" type="range" step=".1"></div>
+<div class="rfControl"><div class="rfLabel">Scale</div><div class="rfValueRow"><input id="rfScale" class="rfValue" type="number" min=".10" max="4" step=".01"></div><input id="rfScaleRange" type="range" min=".10" max="4" step=".01"></div>
+<div class="rfControl"><div class="rfLabel">Yaw</div><div class="rfValueRow"><input id="rfYaw" class="rfValue" type="number" step=".1"><span class="rfUnit">°</span></div></div>
+<div class="rfControl"><div class="rfLabel">Pitch</div><div class="rfValueRow"><input id="rfPitch" class="rfValue" type="number" step=".1"><span class="rfUnit">°</span></div></div>
+<div class="rfControl"><div class="rfLabel">Roll</div><div class="rfValueRow"><input id="rfRoll" class="rfValue" type="number" step=".1"><span class="rfUnit">°</span></div></div>
+</div><button id="rfReset">Reset Reframe</button></div>
+<div id="bar">
+<button id="linear" onclick="setMode(0)">Linear</button>
+<button id="fish" class="active" onclick="setMode(1)">UltraWide</button>
+<button id="planet" onclick="setMode(2)">Tiny Planet</button>
+<button id="mega" onclick="setMode(3)">Mega View</button>
+<div id="ratioWrap">
+<label for="ratioSelect">Ratio</label>
+<select id="ratioSelect" onchange="setAspect(this.value)">
+<option value="original">Original</option>
+<option value="16:9" selected>16:9</option>
+<option value="9:16">9:16</option>
+<option value="1:1">1:1</option>
+<option value="4:5">4:5</option>
+<option value="3:2">3:2</option>
+<option value="4:3">4:3</option>
+</select>
+</div>
+
+<div id="fovWrap">
+<label for="fovRange">FOV</label>
+<input id="fovRange" type="range" min="40" max="225" step="1" value="125">
+<input id="fovNumber" type="number" min="40" max="225" step="0.1" value="125">
+<span>°</span>
+</div>
+
+<div id="rollWrap">
+<label for="rollNumber">Roll</label>
+<input id="rollNumber" type="number" min="-180" max="180" step="0.1" value="0">
+<span>°</span>
+<button id="levelBtn" type="button">Level</button>
+</div>
+
+<div id="saveWrap">
+<label for="saveSize">Output</label>
+<select id="saveSize">
+<option value="max" selected>Maximum</option>
+<option value="8k">8K</option>
+<option value="6k">6K</option>
+<option value="4k">4K</option>
+<option value="custom">Custom…</option>
+</select>
+<select id="saveQuality">
+<option value="0.90">Q90</option>
+<option value="0.95">Q95</option>
+<option value="0.98" selected>Q98</option>
+<option value="1.00">Q100</option>
+</select>
+<select id="saveFormat">
+<option value="jpeg" selected>JPEG</option>
+<option value="tiff">TIFF</option>
+</select>
+</div>
+
+<div id="guideWrap">
+<label for="guideSelect">Grid</label>
+<select id="guideSelect">
+<option value="off" selected>Off</option>
+<option value="thirds">Thirds</option>
+<option value="center">Center</option>
+<option value="both">Both</option>
+</select>
+</div>
+
+<div id="snapWrap">
+<button id="addSnap" type="button">+ Snapshot</button>
+<button id="snapList" type="button">Snapshots (0)</button>
+<button id="saveAll" type="button">Save All</button>
+</div>
+
+<button id="save" onclick="savePerspective()">Save Perspective</button>
+<button onclick="resetView()">Reset</button>
+<button onclick="toggleFullscreen()">Fullscreen</button>
+</div>
+<div id="status">Loading panorama…</div>
+<div id="error"></div>
+<canvas id="c"></canvas>
+<div id="guides">
+<div class="line v v1"></div><div class="line v v2"></div>
+<div class="line h h1"></div><div class="line h h2"></div>
+<div class="line v vc"></div><div class="line h hc"></div>
+</div>
+<div id="snapshotPanel"></div>
+
+<script>
+const c=document.getElementById('c');
+const ratioSelect=document.getElementById('ratioSelect');
+const fovRange=document.getElementById('fovRange');
+const fovNumber=document.getElementById('fovNumber');
+const rollNumber=document.getElementById('rollNumber');
+const levelBtn=document.getElementById('levelBtn');
+const saveSize=document.getElementById('saveSize');
+const saveQuality=document.getElementById('saveQuality');
+const saveFormat=document.getElementById('saveFormat');
+const guideSelect=document.getElementById('guideSelect');
+const guides=document.getElementById('guides');
+const addSnapBtn=document.getElementById('addSnap');
+const snapListBtn=document.getElementById('snapList');
+const saveAllBtn=document.getElementById('saveAll');
+const snapshotPanel=document.getElementById('snapshotPanel');
+const statusEl=document.getElementById('status');
+const errorEl=document.getElementById('error');
+
+function fail(msg){
+  errorEl.style.display='flex';
+  errorEl.textContent='LR 360 Viewer error:\n\n'+msg;
+}
+window.onerror=(m,s,l,c,e)=>{fail(String(m)+(e?'\n'+e.stack:'')); return true;};
+
+const gl=c.getContext('webgl',{antialias:true,alpha:false,preserveDrawingBuffer:true});
+if(!gl) throw new Error('WebGL is unavailable.');
+
+const maxTex=gl.getParameter(gl.MAX_TEXTURE_SIZE);
+
+const PI2=Math.PI*2;
+let yaw=0, pitch=0, roll=0, fov=125, scale=1.0, mode=1;
+let sourceWidth=0, sourceHeight=0;
+let aspectMode='16:9';
+let drag=false, lx=0, ly=0;
+let velX=0, velY=0, animating=false, lastMove=0;
+let ready=false;
+let snapshots=[];
+
+const vs=`
+attribute vec2 p;
+void main(){ gl_Position=vec4(p,0.0,1.0); }
+`;
+
+const fs=`
+precision highp float;
+uniform sampler2D tex;
+uniform vec2 res;
+uniform float yaw,pitch,roll,fov,mode,scale;
+#define PI 3.14159265359
+
+vec3 rotateCamera(vec3 d){
+  float cp=cos(pitch),sp=sin(pitch),cy=cos(yaw),sy=sin(yaw);
+  d=vec3(d.x,cp*d.y-sp*d.z,sp*d.y+cp*d.z);
+  d=vec3(cy*d.x+sy*d.z,d.y,-sy*d.x+cy*d.z);
+  return d;
+}
+
+vec4 sampleSphere(vec3 d){
+  d=normalize(d);
+  float lon=atan(d.x,-d.z);
+  float lat=asin(clamp(d.y,-1.0,1.0));
+  vec2 t=vec2(fract(lon/(2.0*PI)+0.5), clamp(0.5-lat/PI,0.0,1.0));
+  return texture2D(tex,t);
+}
+
+void main(){
+  vec2 q=(gl_FragCoord.xy-.5*res)/res.y;
+  // Roll rotates the frame around its optical center without changing where
+  // the camera is looking.
+  float cr=cos(roll), sr=sin(roll);
+  q=mat2(cr,-sr,sr,cr)*q;
+  q/=max(scale,0.05);
+
+  // Tiny Planet: vector-based stereographic projection.
+  // IMPORTANT: mouse drag rotates the sphere only; it NEVER changes scale.
+  // Only the mouse wheel changes fov/planetScale.
+  if(mode>1.5 && mode<2.5){
+    float r=length(q);
+    float a=atan(q.y,q.x);
+
+    // Bounded scale. Higher fov = more zoom-out / smaller planet.
+    // Studio-like Tiny Planet scale.
+    // A larger stereographic multiplier makes the horizon radius smaller,
+    // producing a small, intact planet with much more sky around it.
+    float planetScale = 0.92 * (fov / 95.0);
+    float rho = r * planetScale;
+    float theta = 2.0 * atan(rho);
+
+    // Sphere direction centered on the nadir (-Y).
+    vec3 pd;
+    if(r < 0.00001){
+      pd=vec3(0.0,-1.0,0.0);
+    } else {
+      float st=sin(theta);
+      pd=vec3(st*cos(a),-cos(theta),st*sin(a));
+    }
+
+    // Rotate the sphere in 3D. This changes orientation only, never zoom.
+    float cy=cos(yaw), sy=sin(yaw);
+    float cp=cos(pitch), sp=sin(pitch);
+
+    // yaw around world Y
+    pd=vec3(cy*pd.x+sy*pd.z,pd.y,-sy*pd.x+cy*pd.z);
+    // pitch around X
+    pd=vec3(pd.x,cp*pd.y-sp*pd.z,sp*pd.y+cp*pd.z);
+
+    gl_FragColor=sampleSphere(pd);
+    return;
+  }
+
+  vec3 d;
+
+  if(mode>2.5 && mode<3.5){
+    // Mega View: equidistant fisheye-like projection.
+    // Stronger edge curvature than UltraWide while keeping the center usable.
+    float r=length(q);
+    float a=atan(q.y,q.x);
+    float theta=r*radians(fov)*0.92;
+    theta=min(theta,PI-0.001);
+    if(r<0.00001) d=vec3(0.0,0.0,-1.0);
+    else {
+      float st=sin(theta);
+      d=vec3(st*cos(a),st*sin(a),-cos(theta));
+    }
+  } else if(mode>3.5){
+    // Dewarp: moderated wide rectilinear projection.
+    float z=1.0/tan(radians(fov)*0.43);
+    d=normalize(vec3(q.x*1.55,q.y*1.55,-z));
+  } else if(mode>0.5){
+    // UltraWide -- keep v1.4 exactly as approved.
+    float r=length(q);
+    float theta = 2.0 * atan(r * tan(radians(fov)*0.25) * 1.88);
+    float a=atan(q.y,q.x);
+    if(r<0.00001) d=vec3(0.0,0.0,-1.0);
+    else {
+      float st=sin(theta);
+      d=vec3(st*cos(a), st*sin(a), -cos(theta));
+    }
+  } else {
+    // Rectilinear perspective
+    float z=1.0/tan(radians(fov)*0.5);
+    d=normalize(vec3(q.x*2.0,q.y*2.0,-z));
+  }
+
+  d=rotateCamera(d);
+  gl_FragColor=sampleSphere(d);
+}
+`;
+
+function mkShader(type,src){
+  const sh=gl.createShader(type);
+  gl.shaderSource(sh,src);
+  gl.compileShader(sh);
+  if(!gl.getShaderParameter(sh,gl.COMPILE_STATUS))
+    throw new Error(gl.getShaderInfoLog(sh));
+  return sh;
+}
+
+const pr=gl.createProgram();
+gl.attachShader(pr,mkShader(gl.VERTEX_SHADER,vs));
+gl.attachShader(pr,mkShader(gl.FRAGMENT_SHADER,fs));
+gl.linkProgram(pr);
+if(!gl.getProgramParameter(pr,gl.LINK_STATUS))
+  throw new Error(gl.getProgramInfoLog(pr));
+gl.useProgram(pr);
+
+const b=gl.createBuffer();
+gl.bindBuffer(gl.ARRAY_BUFFER,b);
+gl.bufferData(gl.ARRAY_BUFFER,new Float32Array([-1,-1,1,-1,-1,1,-1,1,1,-1,1,1]),gl.STATIC_DRAW);
+const pa=gl.getAttribLocation(pr,'p');
+gl.enableVertexAttribArray(pa);
+gl.vertexAttribPointer(pa,2,gl.FLOAT,false,0,0);
+
+const tex=gl.createTexture();
+gl.bindTexture(gl.TEXTURE_2D,tex);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+
+function uploadImage(img){
+  sourceWidth=img.naturalWidth;
+  sourceHeight=img.naturalHeight;
+  let source=img, w=img.naturalWidth, h=img.naturalHeight, scaled=false;
+  const safeMax=Math.max(1024,Math.floor(maxTex*.95));
+
+  if(w>safeMax || h>safeMax){
+    const s=Math.min(safeMax/w,safeMax/h);
+    const cv=document.createElement('canvas');
+    cv.width=Math.max(1,Math.floor(w*s));
+    cv.height=Math.max(1,Math.floor(h*s));
+    cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+    source=cv; w=cv.width; h=cv.height; scaled=true;
+  }
+
+  gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL,false);
+  gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,gl.RGBA,gl.UNSIGNED_BYTE,source);
+
+  const err=gl.getError();
+  if(err!==gl.NO_ERROR) throw new Error('Texture upload failed. WebGL error '+err);
+
+  ready=true;
+  statusEl.textContent='Panorama '+img.naturalWidth+'×'+img.naturalHeight+
+    (scaled?' · GPU texture '+w+'×'+h:' · full source texture')+' · Drag · Wheel Zoom';
+  draw();
+}
+
+const img=new Image();
+img.onload=()=>{try{uploadImage(img)}catch(e){fail(e.stack||String(e))}};
+img.onerror=()=>fail('Could not load the Lightroom-rendered JPEG.');
+img.src='/image?t='+Date.now();
+
+function aspectValue(am){
+  if(am==='original'){
+    return (sourceWidth>0 && sourceHeight>0) ? sourceWidth/sourceHeight : 2.0;
+  }
+  const p=am.split(':');
+  return Number(p[0])/Number(p[1]);
+}
+function computeAspect(){ return aspectValue(aspectMode); }
+
+function resize(){
+  const aspect=computeAspect();
+  const dpr=Math.min(devicePixelRatio||1,2);
+
+  // Leave a little breathing room around the selected frame.
+  const availW=Math.max(1,innerWidth-24);
+  const availH=Math.max(1,innerHeight-24);
+
+  let cssW=availW;
+  let cssH=cssW/aspect;
+  if(cssH>availH){
+    cssH=availH;
+    cssW=cssH*aspect;
+  }
+
+  c.style.width=Math.floor(cssW)+'px';
+  c.style.height=Math.floor(cssH)+'px';
+  guides.style.width=Math.floor(cssW)+'px';
+  guides.style.height=Math.floor(cssH)+'px';
+
+  const w=Math.max(1,Math.floor(cssW*dpr));
+  const hh=Math.max(1,Math.floor(cssH*dpr));
+  if(c.width!==w||c.height!==hh){
+    c.width=w;
+    c.height=hh;
+  }
+  gl.viewport(0,0,c.width,c.height);
+}
+
+
+function fovLimits(){
+  if(mode===0) return [18,155];
+  if(mode===1) return [40,225];
+  if(mode===2) return [72,600];
+  if(mode===4) return [35,160];
+  return [45,170];
+}
+
+function syncFovUI(){
+  const lim=fovLimits();
+  fovRange.min=lim[0];
+  fovRange.max=lim[1];
+  fovNumber.min=lim[0];
+  fovNumber.max=lim[1];
+  fovRange.value=String(Math.round(fov));
+  fovNumber.value=String(Math.round(fov*10)/10);
+}
+
+function setFovExact(v){
+  const lim=fovLimits();
+  let n=Number(v);
+  if(!Number.isFinite(n)) return;
+  n=Math.max(lim[0],Math.min(lim[1],n));
+  fov=n;
+  syncFovUI();
+  draw();
+}
+
+function rollDegrees(){
+  return roll*180/Math.PI;
+}
+
+function setRollDegrees(v){
+  let n=Number(v);
+  if(!Number.isFinite(n)) return;
+  while(n>180) n-=360;
+  while(n<-180) n+=360;
+  roll=n*Math.PI/180;
+  rollNumber.value=String(Math.round(n*10)/10);
+  draw();
+}
+
+fovRange.addEventListener('input',()=>setFovExact(fovRange.value));
+fovNumber.addEventListener('change',()=>setFovExact(fovNumber.value));
+rollNumber.addEventListener('change',()=>setRollDegrees(rollNumber.value));
+levelBtn.addEventListener('click',()=>setRollDegrees(0));
+
+
+
+const rfFov=document.getElementById('rfFov'),rfFovRange=document.getElementById('rfFovRange'),rfScale=document.getElementById('rfScale'),rfScaleRange=document.getElementById('rfScaleRange'),rfYaw=document.getElementById('rfYaw'),rfPitch=document.getElementById('rfPitch'),rfRoll=document.getElementById('rfRoll');
+function rfDeg(a){return a*180/Math.PI} function rfRad(a){return a*Math.PI/180}
+function rfClean(a){let d=rfDeg(a);while(d>180)d-=360;while(d<-180)d+=360;return d}
+function syncReframeUI(){
+ const lim=fovLimits();rfFov.min=rfFovRange.min=lim[0];rfFov.max=rfFovRange.max=lim[1];rfFov.value=(Math.round(fov*10)/10).toFixed(1);rfFovRange.value=fov;
+ rfScale.value=(Math.round(scale*100)/100).toFixed(2);rfScaleRange.value=scale;
+ rfYaw.value=(Math.round(rfClean(yaw)*10)/10).toFixed(1);rfPitch.value=(Math.round(rfClean(pitch)*10)/10).toFixed(1);rfRoll.value=(Math.round(rfClean(roll)*10)/10).toFixed(1);
+ document.querySelectorAll('#projectionButtons button').forEach(b=>b.classList.toggle('active',Number(b.dataset.mode)===mode));
+}
+function rfSetFov(v){setFovExact(v);syncReframeUI()}
+function rfSetScale(v){let n=Number(v);if(!Number.isFinite(n))return;scale=Math.max(.10,Math.min(4,n));syncReframeUI();draw()}
+function rfSetAngle(k,v){let n=Number(v);if(!Number.isFinite(n))return;let a=rfRad(n);if(k==='yaw')yaw=a;else if(k==='pitch')pitch=a;else roll=a;syncReframeUI();draw()}
+rfFov.onchange=()=>rfSetFov(rfFov.value);rfFovRange.oninput=()=>rfSetFov(rfFovRange.value);rfScale.onchange=()=>rfSetScale(rfScale.value);rfScaleRange.oninput=()=>rfSetScale(rfScaleRange.value);
+rfYaw.onchange=()=>rfSetAngle('yaw',rfYaw.value);rfPitch.onchange=()=>rfSetAngle('pitch',rfPitch.value);rfRoll.onchange=()=>rfSetAngle('roll',rfRoll.value);
+document.querySelectorAll('#projectionButtons button').forEach(b=>b.onclick=()=>{setMode(Number(b.dataset.mode));syncReframeUI()});
+function resetReframe(){setMode(mode);yaw=0;pitch=0;roll=0;scale=1;rollNumber.value='0';syncFovUI();syncReframeUI();draw()}
+document.getElementById('rfReset').onclick=resetReframe;document.getElementById('rfResetTop').onclick=resetReframe;
+const rfCollapse=document.getElementById('rfCollapse');
+rfCollapse.onclick=()=>{
+ const collapsed=document.getElementById('reframePanel').classList.toggle('collapsed');
+ rfCollapse.textContent=collapsed?'+':'−';
+ rfCollapse.title=collapsed?'Expand Reframe':'Collapse Reframe';
+ showUI();
+};
+for(const [el,step,fn] of [[rfFov,.25,rfSetFov],[rfScale,.005,rfSetScale],[rfYaw,.12,v=>rfSetAngle('yaw',v)],[rfPitch,.12,v=>rfSetAngle('pitch',v)],[rfRoll,.12,v=>rfSetAngle('roll',v)]]){
+ let sx=0,sv=0,on=false;el.onpointerdown=e=>{if(e.button!==0)return;sx=e.clientX;sv=Number(el.value);on=true;el.setPointerCapture(e.pointerId)};el.onpointermove=e=>{if(on)fn(sv+(e.clientX-sx)*step)};el.onpointerup=()=>on=false;
+}
+
+function updateGuides(){
+  const v=guideSelect.value;
+  guides.style.display=(v==='off')?'none':'block';
+  const thirds=(v==='thirds'||v==='both');
+  const center=(v==='center'||v==='both');
+  for(const s of ['.v1','.v2','.h1','.h2']) guides.querySelector(s).style.display=thirds?'block':'none';
+  for(const s of ['.vc','.hc']) guides.querySelector(s).style.display=center?'block':'none';
+}
+guideSelect.addEventListener('change',updateGuides);
+saveFormat.addEventListener('change',()=>{saveQuality.disabled=(saveFormat.value==='tiff');});
+
+function setAspect(v){
+  aspectMode=v;
+  resize();
+  draw();
+}
+
+function drawAt(w,h,doResize){
+  if(!ready)return;
+  if(doResize) resize();
+
+  const rw = doResize ? c.width : w;
+  const rh = doResize ? c.height : h;
+
+  gl.viewport(0,0,rw,rh);
+  gl.activeTexture(gl.TEXTURE0);
+  gl.bindTexture(gl.TEXTURE_2D,tex);
+  gl.uniform1i(gl.getUniformLocation(pr,'img'),0);
+  gl.uniform2f(gl.getUniformLocation(pr,'res'),rw,rh);
+  gl.uniform1f(gl.getUniformLocation(pr,'yaw'),yaw);
+  gl.uniform1f(gl.getUniformLocation(pr,'pitch'),pitch);
+  gl.uniform1f(gl.getUniformLocation(pr,'roll'),roll);
+  gl.uniform1f(gl.getUniformLocation(pr,'fov'),fov);
+  gl.uniform1f(gl.getUniformLocation(pr,'mode'),mode);
+  gl.uniform1f(gl.getUniformLocation(pr,'scale'),scale);
+  gl.drawArrays(gl.TRIANGLES,0,6);
+  gl.finish();
+}
+
+function draw(){
+  drawAt(c.width,c.height,true);
+}
+
+function updateButtons(){
+  document.getElementById('linear').classList.toggle('active',mode===0);
+  document.getElementById('fish').classList.toggle('active',mode===1);
+  document.getElementById('planet').classList.toggle('active',mode===2);
+  document.getElementById('mega').classList.toggle('active',mode===3);
+}
+
+function setMode(m){
+  mode=m;
+  if(mode===0) fov=95;       // Linear
+  if(mode===1) fov=125;      // approved UltraWide
+  if(mode===2){ fov=95; pitch=0; } // Tiny Planet
+  if(mode===3) fov=115;      // Mega View
+  updateButtons();
+  syncFovUI();
+  draw();
+}
+
+
+function rotateX(v,a){
+  const c0=Math.cos(a),s0=Math.sin(a);
+  return [v[0],c0*v[1]-s0*v[2],s0*v[1]+c0*v[2]];
+}
+function rotateY(v,a){
+  const c0=Math.cos(a),s0=Math.sin(a);
+  return [c0*v[0]+s0*v[2],v[1],-s0*v[0]+c0*v[2]];
+}
+function rotate2(x,y,a){
+  const c0=Math.cos(a),s0=Math.sin(a);
+  return [c0*x-s0*y,s0*x+c0*y];
+}
+function norm3(v){
+  const l=Math.hypot(v[0],v[1],v[2])||1;
+  return [v[0]/l,v[1]/l,v[2]/l];
+}
+function wrapAngle(a){
+  while(a>Math.PI) a-=Math.PI*2;
+  while(a<-Math.PI) a+=Math.PI*2;
+  return a;
+}
+
+function lookHere(clientX,clientY){
+  const r=c.getBoundingClientRect();
+  const nx=((clientX-r.left)/r.width)-0.5;
+  const ny=(1-((clientY-r.top)/r.height))-0.5;
+  let qx=nx*(r.width/r.height);
+  let qy=ny;
+
+  // Match shader Roll before projection.
+  [qx,qy]=rotate2(qx,qy,roll);
+
+  if(mode===2){
+    // Tiny Planet is a nadir-centered projection rather than a normal optical
+    // camera. Use the same gesture semantics as dragging the clicked point
+    // toward center; this is the most intuitive "Look Here" behavior here.
+    const dx=clientX-(r.left+r.width/2);
+    const dy=clientY-(r.top+r.height/2);
+    yaw-=dx*0.0045;
+    pitch+=dy*0.0045;
+    yaw=wrapAngle(yaw);
+    pitch=wrapAngle(pitch);
+    draw();
+    return;
+  }
+
+  let d;
+  if(mode===0){
+    const z=1/Math.tan((fov*Math.PI/180)*0.5);
+    d=norm3([qx*2,qy*2,-z]);
+  }else if(mode===1){
+    const rr=Math.hypot(qx,qy);
+    if(rr<1e-9) return;
+    const theta=2*Math.atan(rr*Math.tan((fov*Math.PI/180)*0.25)*1.88);
+    const a=Math.atan2(qy,qx);
+    d=[Math.sin(theta)*Math.cos(a),Math.sin(theta)*Math.sin(a),-Math.cos(theta)];
+  }else{
+    const rr=Math.hypot(qx,qy);
+    if(rr<1e-9) return;
+    let theta=rr*(fov*Math.PI/180)*0.92;
+    theta=Math.min(theta,Math.PI-0.001);
+    const a=Math.atan2(qy,qx);
+    d=[Math.sin(theta)*Math.cos(a),Math.sin(theta)*Math.sin(a),-Math.cos(theta)];
+  }
+
+  // Shader camera rotation is Rx(pitch) then Ry(yaw).
+  let world=rotateY(rotateX(d,pitch),yaw);
+  world=norm3(world);
+
+  const newPitch=Math.asin(Math.max(-1,Math.min(1,world[1])));
+  const newYaw=Math.atan2(-world[0],-world[2]);
+
+  yaw=wrapAngle(newYaw);
+  pitch=wrapAngle(newPitch);
+  velX=0; velY=0;
+  draw();
+}
+
+c.addEventListener('dblclick',e=>{
+  e.preventDefault();
+  lookHere(e.clientX,e.clientY);
+});
+
+c.addEventListener('contextmenu',e=>e.preventDefault());
+c.addEventListener('mousedown',e=>{
+  if(e.button!==0 && e.button!==2) return;
+  drag=true; lx=e.clientX; ly=e.clientY; velX=0; velY=0;
+  e.preventDefault();
+});
+
+addEventListener('mouseup',()=>{
+  drag=false;
+  startInertia();
+});
+
+addEventListener('mousemove',e=>{
+  if(!drag)return;
+  const dx=e.clientX-lx, dy=e.clientY-ly;
+  const dragScale = e.shiftKey ? 0.00115 : 0.0045;
+  yaw-=dx*dragScale;
+  pitch+=dy*dragScale;
+  if(yaw > PI2) yaw-=PI2;
+  if(yaw < -PI2) yaw+=PI2;
+  if(pitch > PI2) pitch-=PI2;
+  if(pitch < -PI2) pitch+=PI2;
+  // No pitch clamp: allow continuous 360° rotation over the poles.
+  velX=-dx*dragScale;
+  velY=dy*dragScale;
+  lx=e.clientX; ly=e.clientY;
+  draw();
+});
+
+function startInertia(){
+  if(animating)return;
+  animating=true;
+  function frame(){
+    if(drag){animating=false;return;}
+    velX*=.90; velY*=.90;
+    if(Math.abs(velX)<.00005 && Math.abs(velY)<.00005){
+      animating=false; return;
+    }
+    yaw+=velX;
+    pitch+=velY;
+    // Normalize only to avoid unbounded floating-point growth; visually this is limitless.
+    if(yaw > PI2) yaw-=PI2;
+    if(yaw < -PI2) yaw+=PI2;
+    if(pitch > PI2) pitch-=PI2;
+    if(pitch < -PI2) pitch+=PI2;
+    // No pitch clamp: unlimited vertical rotation.
+    draw();
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+}
+
+c.addEventListener('wheel',e=>{
+  // Much wider zoom-out range than before.
+  const step=e.deltaY*.045;
+  if(mode===0){
+    fov=Math.max(18,Math.min(155,fov+step));       // Linear
+  } else if(mode===1){
+    fov=Math.max(40,Math.min(225,fov+step));       // UltraWide
+  } else if(mode===2){
+    fov=Math.max(72,Math.min(600,fov+step));       // Tiny Planet: extended Studio-like zoom-out
+  } else {
+    fov=Math.max(45,Math.min(170,fov+step));       // Mega View
+  }
+  syncFovUI();
+  syncReframeUI();
+  draw();
+  e.preventDefault();
+},{passive:false});
+
+function resetView(){
+  yaw=0;
+  pitch=0;
+  fov = mode===0 ? 95 : (mode===1 ? 125 : (mode===2 ? 95 : 115));
+  roll=0;
+  rollNumber.value='0';
+  velX=0;
+  velY=0;
+  syncFovUI();
+  draw();
+}
+
+function toggleFullscreen(){
+  if(!document.fullscreenElement)document.documentElement.requestFullscreen();
+  else document.exitFullscreen();
+}
+
+addEventListener('resize',draw);
+
+
+let uiTimer=null;
+function showUI(){
+  document.body.classList.add('ui-visible');
+  clearTimeout(uiTimer);
+  uiTimer=setTimeout(()=>document.body.classList.remove('ui-visible'),1800);
+}
+addEventListener('mousemove',showUI,{passive:true});
+ratioSelect.value=aspectMode;
+syncFovUI();
+rollNumber.value='0';
+updateGuides();
+renderSnapshotPanel();
+syncReframeUI();
+showUI();
+
+
+function modeNameFor(m){return m===0?'Linear':m===1?'UltraWide':m===2?'TinyPlanet':m===3?'MegaView':'Dewarp';}
+function captureView(){return {yaw,pitch,roll,fov,scale,mode,aspectMode};}
+function snapshotLabel(s,i){
+  return '#'+(i+1)+' '+modeNameFor(s.mode)+' '+s.aspectMode+' FOV '+(Math.round(s.fov*10)/10)+'°'+
+    (Math.abs(s.roll)>0.0001?' Roll '+(Math.round(s.roll*180/Math.PI*10)/10)+'°':'');
+}
+function renderSnapshotPanel(){
+  snapListBtn.textContent='Snapshots ('+snapshots.length+')';
+  snapshotPanel.innerHTML='';
+  if(!snapshots.length){
+    snapshotPanel.innerHTML='<div style="padding:8px;color:#aaa">No snapshots yet.</div>';
+    return;
+  }
+  snapshots.forEach((s,i)=>{
+    const row=document.createElement('div');row.className='snapRow';
+    const text=document.createElement('div');text.className='snapText';text.textContent=snapshotLabel(s,i);
+    const load=document.createElement('button');load.textContent='Load';load.onclick=()=>loadSnapshot(i);
+    const del=document.createElement('button');del.textContent='×';del.onclick=()=>{snapshots.splice(i,1);renderSnapshotPanel();};
+    row.append(text,load,del);snapshotPanel.appendChild(row);
+  });
+}
+function addSnapshot(){snapshots.push(captureView());renderSnapshotPanel();snapshotPanel.classList.add('visible');showUI();}
+function loadSnapshot(i){
+  const s=snapshots[i];if(!s)return;
+  yaw=s.yaw;pitch=s.pitch;roll=s.roll;fov=s.fov;scale=(s.scale??1);mode=s.mode;aspectMode=s.aspectMode;
+  ratioSelect.value=aspectMode;rollNumber.value=String(Math.round(roll*180/Math.PI*10)/10);
+  updateButtons();syncFovUI();syncReframeUI();resize();draw();
+}
+addSnapBtn.addEventListener('click',addSnapshot);
+snapListBtn.addEventListener('click',()=>snapshotPanel.classList.toggle('visible'));
+
+function modeName(){return modeNameFor(mode);}
+
+function requestedOutputSize(maxW,maxH){
+  const preset=saveSize.value;
+  if(preset==='max') return [maxW,maxH];
+
+  let target=0;
+  if(preset==='8k') target=7680;
+  else if(preset==='6k') target=6144;
+  else if(preset==='4k') target=3840;
+  else if(preset==='custom'){
+    const answer=prompt('Long edge in pixels:',String(Math.max(maxW,maxH)));
+    if(answer===null) return null;
+    target=parseInt(answer,10);
+    if(!Number.isFinite(target)||target<512){
+      alert('Please enter a value of at least 512 pixels.');
+      return null;
+    }
+  }
+
+  if(target>0){
+    const currentLong=Math.max(maxW,maxH);
+    // Never upscale past the real maximum.
+    if(target<currentLong){
+      const s=target/currentLong;
+      maxW=Math.floor(maxW*s);
+      maxH=Math.floor(maxH*s);
+    }
+  }
+  maxW-=maxW%2;
+  maxH-=maxH%2;
+  return [maxW,maxH];
+}
+
+async function renderAndSave(state,shotIndex){
+  let fb=null,outTex=null;
+  if(!ready) throw new Error('Panorama is not ready');
+  if(!sourceWidth||!sourceHeight) throw new Error('Panorama dimensions are unavailable');
+
+  const saveYaw=state.yaw,savePitch=state.pitch,saveRoll=state.roll,saveFov=state.fov;
+  const saveMode=state.mode,saveScale=(state.scale??1),saveRatio=state.aspectMode;
+  const aspect=aspectValue(saveRatio);
+
+  const maxRB=gl.getParameter(gl.MAX_RENDERBUFFER_SIZE);
+  const vp=gl.getParameter(gl.MAX_VIEWPORT_DIMS);
+  const gpuMaxW=Math.min(maxRB,vp[0]),gpuMaxH=Math.min(maxRB,vp[1]);
+
+  let saveW,saveH;
+  if(aspect>=sourceWidth/sourceHeight){saveW=sourceWidth;saveH=Math.floor(saveW/aspect);}
+  else{saveH=sourceHeight;saveW=Math.floor(saveH*aspect);}
+
+  if(saveW>gpuMaxW){const s=gpuMaxW/saveW;saveW=Math.floor(saveW*s);saveH=Math.floor(saveH*s);}
+  if(saveH>gpuMaxH){const s=gpuMaxH/saveH;saveW=Math.floor(saveW*s);saveH=Math.floor(saveH*s);}
+
+  const MAX_PIXELS=36*1000*1000;
+  if(saveW*saveH>MAX_PIXELS){const s=Math.sqrt(MAX_PIXELS/(saveW*saveH));saveW=Math.floor(saveW*s);saveH=Math.floor(saveH*s);}
+  saveW-=saveW%2;saveH-=saveH%2;
+
+  const requested=requestedOutputSize(saveW,saveH);
+  if(requested===null) throw new Error('Save cancelled');
+  saveW=requested[0];saveH=requested[1];
+  if(saveW<2||saveH<2) throw new Error('Invalid output resolution');
+
+  try{
+    outTex=gl.createTexture();
+    gl.activeTexture(gl.TEXTURE1);
+    gl.bindTexture(gl.TEXTURE_2D,outTex);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MIN_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_MAG_FILTER,gl.LINEAR);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_S,gl.CLAMP_TO_EDGE);
+    gl.texParameteri(gl.TEXTURE_2D,gl.TEXTURE_WRAP_T,gl.CLAMP_TO_EDGE);
+    gl.texImage2D(gl.TEXTURE_2D,0,gl.RGBA,saveW,saveH,0,gl.RGBA,gl.UNSIGNED_BYTE,null);
+
+    fb=gl.createFramebuffer();
+    gl.bindFramebuffer(gl.FRAMEBUFFER,fb);
+    gl.framebufferTexture2D(gl.FRAMEBUFFER,gl.COLOR_ATTACHMENT0,gl.TEXTURE_2D,outTex,0);
+    if(gl.checkFramebufferStatus(gl.FRAMEBUFFER)!==gl.FRAMEBUFFER_COMPLETE)
+      throw new Error('HQ framebuffer unsupported at '+saveW+'×'+saveH);
+
+    gl.activeTexture(gl.TEXTURE0);
+    gl.bindTexture(gl.TEXTURE_2D,tex);
+    gl.uniform1i(gl.getUniformLocation(pr,'img'),0);
+    gl.viewport(0,0,saveW,saveH);
+    gl.uniform2f(gl.getUniformLocation(pr,'res'),saveW,saveH);
+    gl.uniform1f(gl.getUniformLocation(pr,'yaw'),saveYaw);
+    gl.uniform1f(gl.getUniformLocation(pr,'pitch'),savePitch);
+    gl.uniform1f(gl.getUniformLocation(pr,'roll'),saveRoll);
+    gl.uniform1f(gl.getUniformLocation(pr,'fov'),saveFov);
+    gl.uniform1f(gl.getUniformLocation(pr,'mode'),saveMode);
+    gl.uniform1f(gl.getUniformLocation(pr,'scale'),saveScale);
+    gl.drawArrays(gl.TRIANGLES,0,6);gl.finish();
+
+    const pixels=new Uint8Array(saveW*saveH*4);
+    gl.readPixels(0,0,saveW,saveH,gl.RGBA,gl.UNSIGNED_BYTE,pixels);
+
+    const out=document.createElement('canvas');out.width=saveW;out.height=saveH;
+    const ctx=out.getContext('2d',{alpha:false}),imageData=ctx.createImageData(saveW,saveH);
+    const rowBytes=saveW*4;
+    for(let y=0;y<saveH;y++){
+      const src=(saveH-1-y)*rowBytes;
+      imageData.data.set(pixels.subarray(src,src+rowBytes),y*rowBytes);
+    }
+    ctx.putImageData(imageData,0,0);
+
+    const isTiff=saveFormat.value==='tiff';
+    const mime=isTiff?'image/png':'image/jpeg';
+    const blob=await new Promise((resolve,reject)=>
+      out.toBlob(b=>b?resolve(b):reject(new Error('Image encoding failed')),mime,isTiff?1:Number(saveQuality.value))
+    );
+
+    const params=new URLSearchParams({
+      mode:modeNameFor(saveMode),ratio:saveRatio,fov:String(Math.round(saveFov)),
+      roll:String(Math.round(saveRoll*180/Math.PI)),size:saveSize.value,
+      q:String(Math.round(Number(saveQuality.value)*100)),format:isTiff?'tiff':'jpeg'
+    });
+    if(shotIndex)params.set('shot',String(shotIndex));
+
+    await new Promise((resolve,reject)=>{
+      const xhr=new XMLHttpRequest();
+      xhr.open('POST','/save-perspective?'+params.toString(),true);
+      xhr.setRequestHeader('Content-Type',mime);xhr.timeout=180000;
+      xhr.onload=()=>xhr.status>=200&&xhr.status<300?resolve(xhr.responseText):reject(new Error('HTTP '+xhr.status+': '+xhr.responseText));
+      xhr.onerror=()=>reject(new Error('Network error while saving'));
+      xhr.ontimeout=()=>reject(new Error('Save request timed out'));
+      xhr.send(blob);
+    });
+    return {w:saveW,h:saveH,format:isTiff?'TIFF':'JPEG'};
+  }finally{
+    if(outTex)gl.deleteTexture(outTex);
+    if(fb)gl.deleteFramebuffer(fb);
+    gl.bindFramebuffer(gl.FRAMEBUFFER,null);
+    gl.activeTexture(gl.TEXTURE0);gl.bindTexture(gl.TEXTURE_2D,tex);
+    gl.uniform1i(gl.getUniformLocation(pr,'img'),0);
+    gl.viewport(0,0,c.width,c.height);
+    gl.uniform2f(gl.getUniformLocation(pr,'res'),c.width,c.height);
+    gl.uniform1f(gl.getUniformLocation(pr,'yaw'),yaw);
+    gl.uniform1f(gl.getUniformLocation(pr,'pitch'),pitch);
+    gl.uniform1f(gl.getUniformLocation(pr,'roll'),roll);
+    gl.uniform1f(gl.getUniformLocation(pr,'fov'),fov);
+    gl.uniform1f(gl.getUniformLocation(pr,'mode'),mode);
+  gl.uniform1f(gl.getUniformLocation(pr,'scale'),scale);
+    gl.drawArrays(gl.TRIANGLES,0,6);
+  }
+}
+
+async function savePerspective(){
+  showUI();
+  const btn=document.getElementById('save'),old=btn.textContent;
+  btn.disabled=true;btn.textContent='Rendering HQ…';
+  try{
+    const r=await renderAndSave(captureView(),0);
+    btn.textContent='Saved '+r.w+'×'+r.h+' '+r.format+' ✓';
+  }catch(e){
+    btn.textContent='Save failed';
+    alert('Save Perspective failed:\n'+(e&&e.message?e.message:e));
+  }finally{
+    setTimeout(()=>{btn.textContent=old;btn.disabled=false},2200);
+  }
+}
+
+async function saveAllSnapshots(){
+  if(!snapshots.length){alert('Add at least one Snapshot first.');return;}
+  showUI();
+  const old=saveAllBtn.textContent;saveAllBtn.disabled=true;
+  try{
+    for(let i=0;i<snapshots.length;i++){
+      saveAllBtn.textContent='Saving '+(i+1)+'/'+snapshots.length+'…';
+      await renderAndSave(snapshots[i],i+1);
+    }
+    saveAllBtn.textContent='Saved '+snapshots.length+' ✓';
+  }catch(e){
+    saveAllBtn.textContent='Save All failed';
+    alert('Save All failed:\n'+(e&&e.message?e.message:e));
+  }finally{
+    setTimeout(()=>{saveAllBtn.textContent=old;saveAllBtn.disabled=false},2500);
+  }
+}
+saveAllBtn.addEventListener('click',saveAllSnapshots);
+
+// heartbeat for automatic local-server shutdown
+function sendHeartbeat(){
+  fetch('/heartbeat?t='+Date.now(),{cache:'no-store'}).catch(()=>{});
+}
+updateButtons();
+sendHeartbeat();
+setInterval(sendHeartbeat,2000);
+</script>
+</body>
+</html>
