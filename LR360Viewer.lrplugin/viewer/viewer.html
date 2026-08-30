@@ -336,11 +336,10 @@ if(!gl) throw new Error('WebGL is unavailable.');
 
 const maxTex=gl.getParameter(gl.MAX_TEXTURE_SIZE);
 
-const PI2=Math.PI*2;
 let yaw=0, pitch=0, roll=0, fov=125, scale=1.0, mode=1;
 let sourceWidth=0, sourceHeight=0;
 let aspectMode='16:9';
-let drag=false, lx=0, ly=0;
+let drag=false, dragPointerId=null, lx=0, ly=0;
 let velX=0, velY=0, animating=false, lastMove=0;
 let ready=false;
 let snapshots=[];
@@ -408,9 +407,11 @@ void main(){
     float cy=cos(yaw), sy=sin(yaw);
     float cp=cos(pitch), sp=sin(pitch);
 
-    // yaw around world Y
-    pd=vec3(cy*pd.x+sy*pd.z,pd.y,-sy*pd.x+cy*pd.z);
-    // pitch around X
+    // Tiny Planet looks toward nadir, so world-Y rotation appears as Roll.
+    // Rotate horizontal drag around screen-up (world Z) instead, matching the
+    // pan-like Yaw gesture used by the other projections.
+    pd=vec3(cy*pd.x-sy*pd.y,sy*pd.x+cy*pd.y,pd.z);
+    // Vertical drag remains a pitch rotation around screen-right (world X).
     pd=vec3(pd.x,cp*pd.y-sp*pd.z,sp*pd.y+cp*pd.z);
 
     gl_FragColor=sampleSphere(pd);
@@ -785,32 +786,38 @@ c.addEventListener('dblclick',e=>{
 });
 
 c.addEventListener('contextmenu',e=>e.preventDefault());
-c.addEventListener('mousedown',e=>{
+c.addEventListener('pointerdown',e=>{
   if(e.button!==0 && e.button!==2) return;
+  dragPointerId=e.pointerId;
   drag=true; lx=e.clientX; ly=e.clientY; velX=0; velY=0;
+  c.setPointerCapture(e.pointerId);
   e.preventDefault();
 });
 
-addEventListener('mouseup',()=>{
+function finishCameraDrag(e){
+  if(!drag || (e && e.pointerId!==dragPointerId))return;
   drag=false;
+  if(e && c.hasPointerCapture(e.pointerId))c.releasePointerCapture(e.pointerId);
+  dragPointerId=null;
   startInertia();
-});
+}
+c.addEventListener('pointerup',finishCameraDrag);
+c.addEventListener('pointercancel',finishCameraDrag);
 
-addEventListener('mousemove',e=>{
-  if(!drag)return;
+c.addEventListener('pointermove',e=>{
+  if(!drag || e.pointerId!==dragPointerId)return;
   const dx=e.clientX-lx, dy=e.clientY-ly;
   const dragScale = e.shiftKey ? 0.00115 : 0.0045;
-  yaw-=dx*dragScale;
-  pitch+=dy*dragScale;
-  if(yaw > PI2) yaw-=PI2;
-  if(yaw < -PI2) yaw+=PI2;
-  if(pitch > PI2) pitch-=PI2;
-  if(pitch < -PI2) pitch+=PI2;
-  // No pitch clamp: allow continuous 360° rotation over the poles.
+  // Canvas drag controls camera direction only. Roll remains an independent
+  // Reframe control and is never modified by pointer movement.
+  yaw=wrapAngle(yaw-dx*dragScale);
+  pitch=wrapAngle(pitch+dy*dragScale);
   velX=-dx*dragScale;
   velY=dy*dragScale;
   lx=e.clientX; ly=e.clientY;
+  syncReframeUI();
   draw();
+  e.preventDefault();
 });
 
 function startInertia(){
@@ -822,14 +829,10 @@ function startInertia(){
     if(Math.abs(velX)<.00005 && Math.abs(velY)<.00005){
       animating=false; return;
     }
-    yaw+=velX;
-    pitch+=velY;
-    // Normalize only to avoid unbounded floating-point growth; visually this is limitless.
-    if(yaw > PI2) yaw-=PI2;
-    if(yaw < -PI2) yaw+=PI2;
-    if(pitch > PI2) pitch-=PI2;
-    if(pitch < -PI2) pitch+=PI2;
+    yaw=wrapAngle(yaw+velX);
+    pitch=wrapAngle(pitch+velY);
     // No pitch clamp: unlimited vertical rotation.
+    syncReframeUI();
     draw();
     requestAnimationFrame(frame);
   }
